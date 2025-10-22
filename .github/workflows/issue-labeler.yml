@@ -1,4 +1,4 @@
-name: Issue labeler (keywords)
+name: Issue labeler (AI)
 
 on:
   issues:
@@ -14,33 +14,64 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Label by regex
+      - name: AI labeler
         uses: actions/github-script@v7
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           github-token: ${{ github.token }}
           script: |
             const issue = context.payload.issue;
-            const text = `${issue.title}\n\n${issue.body || ''}`;
+            const text = `${issue.title}\n\n${issue.body || ''}`.slice(0, 8000); // safety
 
-            const rules = {
-              bug: [/\bbug\b/i, /\berror\b/i, /\bexception\b/i, /\bcrash\b/i],
-              feature: [/\bfeature\b/i, /\brequest\b/i, /\bimprovement\b/i, /\benhancement\b/i],
-              question: [/\bquestion\b/i, /\bhelp\b/i, /\bhow to\b/i, /\bvraag\b/i],
-            };
+            // 1) Vraag label aan AI
+            const system = `Je classificeert GitHub issues. Kies exact één label uit: bug, feature, question. Antwoord alleen met het label.`;
+            const user = `Tekst:\n"""${text}"""`;
 
-            const toAdd = [];
-            for (const [label, patterns] of Object.entries(rules)) {
-              if (patterns.some((re) => re.test(text))) toAdd.push(label);
+            const r = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                  { role: 'system', content: system },
+                  { role: 'user', content: user }
+                ],
+                temperature: 0
+              })
+            });
+            if (!r.ok) {
+              core.warning(`OpenAI call failed: ${r.status} ${await r.text()}`);
+            }
+            const data = r.ok ? await r.json() : null;
+            const ai = data?.choices?.[0]?.message?.content?.trim().toLowerCase();
+
+            // 2) Safeguard: val terug op simpele regels als AI leeg is of ongeldige label
+            const allowed = new Set(['bug','feature','question']);
+            let label = allowed.has(ai) ? ai : null;
+
+            if (!label) {
+              const rules = {
+                bug: [/\berror\b/i, /\bexception\b/i, /\bbug\b/i, /\bcrash\b/i],
+                feature: [/\bfeature\b/i, /\brequest\b/i, /\bimprovement\b/i, /\benhancement\b/i],
+                question: [/\bquestion\b/i, /\bhelp\b/i, /\bhow to\b/i, /\bvraag\b/i],
+              };
+              for (const [l, pats] of Object.entries(rules)) {
+                if (pats.some(re => re.test(text))) { label = l; break; }
+              }
             }
 
-            if (toAdd.length) {
+            if (label) {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                labels: toAdd,
+                labels: [label],
               });
-              core.info(`Added labels: ${toAdd.join(', ')}`);
+              core.info(`Added: ${label} (ai="${ai}")`);
             } else {
-              core.info('No labels matched.');
+              core.info('No label matched.');
             }
