@@ -14,11 +14,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Apply labels based on title/body
-        uses: github/issue-labeler@v3.4
+      - name: Label by regex
+        uses: actions/github-script@v7
         with:
-          configuration-path: .github/issue-labeler.yml
-          include-title: 1
-          include-body: 1
-          enable-versioned-regex: 0
-          repo-token: ${{ github.token }}
+          github-token: ${{ github.token }}
+          script: |
+            const issue = context.payload.issue;
+            const text = `${issue.title}\n\n${issue.body || ''}`;
+
+            const rules = {
+              bug: [/\bbug\b/i, /\berror\b/i, /\bexception\b/i, /\bcrash\b/i],
+              feature: [/\bfeature\b/i, /\brequest\b/i, /\bimprovement\b/i, /\benhancement\b/i],
+              question: [/\bquestion\b/i, /\bhelp\b/i, /\bhow to\b/i, /\bvraag\b/i],
+            };
+
+            const toAdd = [];
+            for (const [label, patterns] of Object.entries(rules)) {
+              if (patterns.some((re) => re.test(text))) toAdd.push(label);
+            }
+
+            if (toAdd.length) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: toAdd,
+              });
+              core.info(`Added labels: ${toAdd.join(', ')}`);
+            } else {
+              core.info('No labels matched.');
+            }
