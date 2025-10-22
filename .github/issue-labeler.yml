@@ -1,0 +1,16 @@
+# Regex per label. Case-insensitive.
+bug:
+  - '(?i)\bbug\b'
+  - '(?i)\berror\b'
+  - '(?i)\bexception\b'
+  - '(?i)\bcrash\b'
+feature:
+  - '(?i)\bfeature\b'
+  - '(?i)\brequest\b'
+  - '(?i)\bimprovement\b'
+  - '(?i)\benhancement\b'
+question:
+  - '(?i)\bquestion\b'
+  - '(?i)\bhelp\b'
+  - '(?i)\bhow to\b'
+  - '(?i)\bvraag\b'

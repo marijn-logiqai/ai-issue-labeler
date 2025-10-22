@@ -1,0 +1,26 @@
+name: Issue labeler (keywords)
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply labels based on title/body
+        uses: github/issue-labeler@v3
+        with:
+          configuration-path: .github/issue-labeler.yml
+          enable-versioned-regex: false
+          include-title: true
+          include-body: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
