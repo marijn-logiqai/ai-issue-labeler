@@ -1,16 +1,15 @@
-# Regex per label. Case-insensitive.
 bug:
-  - '(?i)\bbug\b'
-  - '(?i)\berror\b'
-  - '(?i)\bexception\b'
-  - '(?i)\bcrash\b'
+  - '/\bbug\b/i'
+  - '/\berror\b/i'
+  - '/\bexception\b/i'
+  - '/\bcrash\b/i'
 feature:
-  - '(?i)\bfeature\b'
-  - '(?i)\brequest\b'
-  - '(?i)\bimprovement\b'
-  - '(?i)\benhancement\b'
+  - '/\bfeature\b/i'
+  - '/\brequest\b/i'
+  - '/\bimprovement\b/i'
+  - '/\benhancement\b/i'
 question:
-  - '(?i)\bquestion\b'
-  - '(?i)\bhelp\b'
-  - '(?i)\bhow to\b'
-  - '(?i)\bvraag\b'
+  - '/\bquestion\b/i'
+  - '/\bhelp\b/i'
+  - '/\bhow to\b/i'
+  - '/\bvraag\b/i'
